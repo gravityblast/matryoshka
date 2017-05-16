@@ -1,19 +1,63 @@
 # Matryoshka
 
-**TODO: Add description**
+An image transformation reverse proxy written in Elixir.
 
-## Installation
+It is meant to be used with a CDN in front of it, so that
+the it processes each image only once during the first request.
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `matryoshka` to your list of dependencies in `mix.exs`:
+Internally it uses the `mogrify` command.
+
+## Transformations
+
+You can use a plug-like syntax to specify all the transformations:
 
 ```elixir
-def deps do
-  [{:matryoshka, "~> 0.1.0"}]
+defmodule MyTransformations do
+  use Matryoshka.TransformationPlug
+
+  transformation Resize
+  transformation Rotate
+  transformation Strip
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/matryoshka](https://hexdocs.pm/matryoshka).
+Each transformation is just a behaviour with a transform function:
 
+```elixir
+defmodule Resize do
+  alias Matryoshka.{Command}
+
+  def transform(%Command{} = cmd, opts) do
+    opts
+    |> Map.get("size", "")
+    |> Integer.parse
+    |> case do
+      {size, ""} ->
+        cmd
+        |> Command.add_option("-thumbnail", "#{size}x#{size}")
+        |> Command.add_option("-quality", "80")
+      _ ->
+        cmd
+    end
+  end
+end
+```
+
+## Usage
+
+```bash
+export REMOTE_ROOT="https://s3.amazonaws.com/BUCKET_NAME"
+mix run --no-halt
+```
+
+## TODO
+
+The current repository contains an application that can be run with `mix run --no-halt`.
+The plan is to change it so that it can be used as a simple library, and each one can just
+use the `TransformationPlug` behaviour.
+
+* [ ] Write a TODO list
+
+## Author
+
+[Andrea Franz](http://gravityblast.com)
